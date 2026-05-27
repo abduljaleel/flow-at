@@ -1,7 +1,7 @@
 export const appConfig = {
-  name: "Flow",
-  description: "IF/THEN for the AI age. Orchestrate decisions and workflows.",
-  url: "https://flow.at",
+  name: "Axiom",
+  description: "Safety as physics, not policy. From Vienna.",
+  url: "https://axiom.at",
   navItems: [
     { title: "Dashboard", href: "/dashboard", icon: "dashboard" },
     { title: "Workflows", href: "/workflows", icon: "git" },
