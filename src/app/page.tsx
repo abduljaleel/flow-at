@@ -1,390 +1,295 @@
 import Link from "next/link";
 import { appConfig } from "@/lib/config";
 
+// A printed mathematical/philosophical treatise.
+// Warm paper, dark ink, serif throughout. Blue appears in only ~2 places.
+const SERIF = "'Iowan Old Style', 'Palatino', 'Palatino Linotype', Georgia, serif";
+const MONO = "'SF Mono', ui-monospace, 'JetBrains Mono', 'Menlo', 'Consolas', monospace";
+const INK = "#1a1815";
+const PAPER = "#f7f4ee";
+const RULE = "#d8d2c5";
+const FAINT = "#6b6557";
 const ACCENT = "#5e7cff";
+
+const AXIOMS: { numeral: string; title: string; body: string }[] = [
+  {
+    numeral: "I",
+    title: "A constraint is evaluated before the act, never after.",
+    body: "Permission is decided at the threshold. An action that has already occurred can be logged, regretted, or audited — but it cannot be prevented. Axiom moves the decision earlier in time.",
+  },
+  {
+    numeral: "II",
+    title: "What is forbidden cannot be reached, not merely discouraged.",
+    body: "A rule that depends on the agent's cooperation is a suggestion. A constraint that bounds the space of possible actions is a law. We deal only in the latter.",
+  },
+  {
+    numeral: "III",
+    title: "Every prohibition carries its own proof.",
+    body: "When an action is refused, the refusal is accompanied by the predicate that refused it and a record sufficient to reconstruct the judgment. Compliance is not asserted; it is demonstrable.",
+  },
+];
 
 export default function LandingPage() {
   return (
     <div
-      className="flex min-h-screen flex-col bg-[#08090d] text-[#d4d4d8]"
-      style={{ fontFamily: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" }}
+      className="min-h-screen"
+      style={{
+        background: PAPER,
+        color: INK,
+        fontFamily: SERIF,
+        // faint vertical paper-grain so the cream never reads as flat SaaS white
+        backgroundImage:
+          "repeating-linear-gradient(90deg, rgba(0,0,0,0.012) 0px, rgba(0,0,0,0.012) 1px, transparent 1px, transparent 4px)",
+      }}
     >
-      {/* ──────────────────────────────────────────────────────────────
-          NAV
-      ────────────────────────────────────────────────────────────── */}
-      <header className="border-b border-[#16181d]">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-3">
+      <div className="mx-auto max-w-[720px] px-6 sm:px-8">
+        {/* ══════════════════════════════════════════════════════════════
+            MASTHEAD — letterpress
+        ══════════════════════════════════════════════════════════════ */}
+        <header className="pt-14">
+          <div className="flex items-end justify-between">
+            <h1
+              className="text-3xl sm:text-4xl"
+              style={{ letterSpacing: "0.42em", fontWeight: 600 }}
+            >
+              AXIOM
+            </h1>
             <div
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }}
-            />
-            <span
-              className="text-base tracking-wide text-[#fafafa]"
-              style={{ fontFamily: "'Cormorant Garamond', 'Iowan Old Style', Georgia, serif", fontWeight: 600 }}
+              className="pb-1 text-right text-[11px] uppercase"
+              style={{ letterSpacing: "0.22em", color: FAINT }}
             >
-              Axiom
-            </span>
-            <span
-              className="text-[10px] uppercase tracking-[0.25em] text-[#52525b] hidden sm:inline"
-              style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-            >
-              · Vienna
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/login"
-              className="text-xs text-[#71717a] hover:text-[#fafafa] transition-colors"
-              style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-            >
-              sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="text-xs border px-4 py-1.5 transition-colors"
-              style={{
-                fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-                borderColor: `${ACCENT}66`,
-                color: ACCENT,
-              }}
-            >
-              get started
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* ──────────────────────────────────────────────────────────────
-          HERO
-      ────────────────────────────────────────────────────────────── */}
-      <section className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-28 pb-16 text-center">
-        <div className="flex items-center gap-2 mb-10">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: ACCENT, boxShadow: `0 0 10px ${ACCENT}` }}
-          />
-          <span
-            className="text-[10px] tracking-[0.3em] uppercase"
-            style={{ color: ACCENT, fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-          >
-            Governance Layer · Constraints Active
-          </span>
-        </div>
-
-        <h1
-          className="text-7xl sm:text-8xl lg:text-[10rem] tracking-tight text-white leading-none"
-          style={{ fontFamily: "'Cormorant Garamond', 'Iowan Old Style', Georgia, serif", fontWeight: 500 }}
-        >
-          Axiom
-        </h1>
-
-        <p className="mt-8 max-w-2xl text-xl sm:text-2xl text-[#d4d4d8] leading-snug">
-          Safety as physics, not policy.
-        </p>
-        <p
-          className="mt-6 text-sm text-[#71717a]"
-          style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-        >
-          From Vienna — birthplace of formal logic.
-        </p>
-
-        <div
-          className="mt-10 inline-block border-l-2 pl-4 py-1 text-left text-sm text-[#a1a1aa] max-w-md"
-          style={{ borderColor: `${ACCENT}80` }}
-        >
-          &ldquo;Agents break rules nobody told them existed.&rdquo;
-        </div>
-      </section>
-
-      {/* ──────────────────────────────────────────────────────────────
-          CONSTRAINT AS PREDICATE — code block + violation log
-      ────────────────────────────────────────────────────────────── */}
-      <section className="border-t border-[#16181d]">
-        <div className="mx-auto max-w-4xl px-6 py-20">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: ACCENT }}
-              />
-              <span
-                className="text-[10px] uppercase tracking-[0.25em] text-[#71717a]"
-                style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-              >
-                /constraints/eu-data.axiom
-              </span>
+              Vienna · MMXXVI
             </div>
-            <span
-              className="text-[10px] uppercase tracking-[0.25em] text-[#52525b]"
-              style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-            >
-              compiled
-            </span>
           </div>
-
-          {/* Constraint code block */}
+          <div className="mt-4" style={{ borderTop: `1.5px solid ${INK}` }} />
           <div
-            className="rounded-md border bg-[#0a0c11] overflow-hidden"
-            style={{ borderColor: `${ACCENT}40`, boxShadow: `0 0 30px ${ACCENT}15` }}
+            className="mt-1 flex items-center justify-between"
+            style={{ borderTop: `0.5px solid ${RULE}`, paddingTop: "8px" }}
           >
-            <div
-              className="px-5 py-2 border-b text-[10px] uppercase tracking-[0.2em] flex items-center justify-between"
+            <p
+              className="text-[11px] uppercase"
+              style={{ letterSpacing: "0.22em", color: FAINT }}
+            >
+              On the Safety of Autonomous Agents
+            </p>
+            <nav className="flex items-center gap-5 text-[13px]">
+              <Link
+                href="/login"
+                className="underline decoration-from-font underline-offset-4 transition-colors"
+                style={{ color: INK, textDecorationColor: RULE }}
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                className="underline decoration-from-font underline-offset-4 transition-colors"
+                style={{ color: INK, textDecorationColor: ACCENT }}
+              >
+                Get started
+              </Link>
+            </nav>
+          </div>
+        </header>
+
+        {/* ══════════════════════════════════════════════════════════════
+            OPENING — dateline + drop cap + justified thesis
+        ══════════════════════════════════════════════════════════════ */}
+        <section className="pt-16">
+          <p
+            className="italic"
+            style={{ color: FAINT, fontSize: "15px" }}
+          >
+            A treatise on agent safety.
+          </p>
+
+          <p
+            className="mt-6"
+            style={{
+              fontSize: "27px",
+              lineHeight: 1.34,
+              fontWeight: 500,
+            }}
+          >
+            <span
               style={{
-                borderColor: "#16181d",
-                color: ACCENT,
-                fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
+                float: "left",
+                fontSize: "82px",
+                lineHeight: 0.78,
+                paddingRight: "12px",
+                paddingTop: "6px",
+                fontWeight: 600,
               }}
             >
-              <span>predicate</span>
-              <span className="text-[#52525b]">v 1.4.2</span>
-            </div>
-            <pre
-              className="px-5 py-6 text-sm leading-relaxed overflow-x-auto"
-              style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-            >
-{`  `}<span style={{ color: ACCENT }}>axiom</span>(<span className="text-[#22c55e]">&quot;data.pii.never.leaves.eu&quot;</span>){` {`}
-{`    `}<span className="text-[#a78bfa]">when</span>:{` `}<span className="text-[#d4d4d8]">agent.action.includes</span>(<span className="text-[#22c55e]">&quot;export&quot;</span>)
-{`    `}<span className="text-[#a78bfa]">then</span>:{` `}<span className="text-[#ef4444]">block</span>.<span className="text-[#d4d4d8]">with_reason</span>(<span className="text-[#22c55e]">&quot;EU data sovereignty&quot;</span>)
-{`  }`}
-            </pre>
-          </div>
-
-          {/* Violation log */}
-          <div className="mt-6 rounded-md border border-[#16181d] bg-[#0a0c11] overflow-hidden">
-            <div
-              className="px-5 py-2 border-b border-[#16181d] text-[10px] uppercase tracking-[0.2em] text-[#71717a] flex items-center justify-between"
-              style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-            >
-              <span>/var/log/axiom/blocks.jsonl</span>
-              <span style={{ color: "#ef4444" }}>· violation prevented</span>
-            </div>
-            <div
-              className="px-5 py-4 text-xs leading-relaxed text-[#a1a1aa]"
-              style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-            >
-              <span className="text-[#52525b]">2026-05-27T14:32:08.441Z</span>{" "}
-              <span style={{ color: "#ef4444" }}>BLOCK</span>{" "}
-              <span className="text-white">agent=research-04</span>{" "}
-              <span className="text-[#71717a]">action=</span>
-              <span className="text-[#22c55e]">&quot;export_dataset&quot;</span>{" "}
-              <span className="text-[#71717a]">target=</span>
-              <span className="text-[#22c55e]">&quot;s3://us-east-1/...&quot;</span>
-              <br />
-              <span className="pl-4 text-[#52525b]">↳ violated:</span>{" "}
-              <span style={{ color: ACCENT }}>data.pii.never.leaves.eu</span>{" "}
-              <span className="text-[#52525b]">· reason: EU data sovereignty · halted before syscall</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────────────────────────────────────────────────────────
-          CONSTRAINT LIFECYCLE — DECLARE → COMPILE → BLOCK
-      ────────────────────────────────────────────────────────────── */}
-      <section className="border-t border-[#16181d]">
-        <div className="mx-auto max-w-5xl px-6 py-20">
-          <p
-            className="text-[10px] uppercase tracking-[0.3em] text-[#71717a] mb-12 text-center"
-            style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-          >
-            The constraint lifecycle
+              S
+            </span>
+            afety is not a policy you write. It is a space you cannot leave.
           </p>
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              {
-                step: "01",
-                title: "DECLARE",
-                desc: "Write the law once, in a declarative DSL. Human-readable, version-controlled, reviewable.",
-              },
-              {
-                step: "02",
-                title: "COMPILE",
-                desc: "Axiom lowers the predicate into a fast runtime check. No interpretation cost at execution.",
-              },
-              {
-                step: "03",
-                title: "BLOCK BEFORE EXECUTION",
-                desc: "Violations are stopped at the syscall boundary — before the action happens, never after.",
-              },
-            ].map((s, idx) => (
-              <div key={s.step} className="relative">
-                <div className="border border-[#16181d] bg-[#0a0c11] p-6 h-full">
+
+          <p
+            className="mt-7"
+            style={{
+              fontSize: "16.5px",
+              lineHeight: 1.72,
+              textAlign: "justify",
+              textJustify: "inter-word",
+              hyphens: "auto",
+            }}
+          >
+            The prevailing approach asks an agent to behave, then watches to see
+            whether it did. This is governance by hindsight — a ledger of harms
+            already done. {appConfig.name} proposes the opposite discipline. We
+            do not instruct the agent in what it ought not do; we shape the world
+            so that the forbidden act has no path to occur. The rule is compiled
+            into the boundary of action itself, evaluated before any irreversible
+            step, and accompanied always by the proof of its own enforcement.
+            What cannot happen needs no monitoring.
+          </p>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════
+            THE AXIOMS — numbered like formal theorems
+        ══════════════════════════════════════════════════════════════ */}
+        <section className="pt-16">
+          <p
+            className="text-[11px] uppercase"
+            style={{ letterSpacing: "0.3em", color: FAINT }}
+          >
+            The Axioms
+          </p>
+          <div className="mt-3" style={{ borderTop: `0.5px solid ${RULE}` }} />
+
+          <ol className="mt-2">
+            {AXIOMS.map((ax) => (
+              <li
+                key={ax.numeral}
+                className="py-7"
+                style={{ borderBottom: `0.5px solid ${RULE}` }}
+              >
+                <div className="flex gap-5 sm:gap-7">
+                  {/* hanging Roman numeral */}
                   <div
-                    className="text-[10px] uppercase tracking-[0.25em] mb-3"
-                    style={{ color: ACCENT, fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
+                    className="shrink-0 pt-1 text-right"
+                    style={{
+                      width: "3.4rem",
+                      fontStyle: "italic",
+                      fontSize: "21px",
+                      color: FAINT,
+                    }}
                   >
-                    Step {s.step}
+                    {ax.numeral}.
                   </div>
-                  <div
-                    className="text-lg text-white mb-3"
-                    style={{ fontFamily: "'Cormorant Garamond', 'Iowan Old Style', Georgia, serif", fontWeight: 600 }}
-                  >
-                    {s.title}
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: "20px",
+                        lineHeight: 1.4,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span style={{ color: FAINT }}>Axiom {ax.numeral} — </span>
+                      {ax.title}
+                    </h3>
+                    <p
+                      className="mt-3"
+                      style={{ fontSize: "16px", lineHeight: 1.7, color: "#3a352d" }}
+                    >
+                      {ax.body}
+                    </p>
                   </div>
-                  <div className="text-xs text-[#71717a] leading-relaxed">{s.desc}</div>
                 </div>
-                {idx < 2 && (
-                  <div
-                    className="hidden md:flex absolute top-1/2 -right-3 -translate-y-1/2 text-xs"
-                    style={{ color: ACCENT, fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-                  >
-                    →
-                  </div>
-                )}
-              </div>
+              </li>
             ))}
-          </div>
-        </div>
-      </section>
+          </ol>
+        </section>
 
-      {/* ──────────────────────────────────────────────────────────────
-          STATS
-      ────────────────────────────────────────────────────────────── */}
-      <section className="border-t border-[#16181d]" style={{ background: "#06070a" }}>
-        <div className="mx-auto max-w-6xl px-6 py-20">
-          <div className="grid gap-12 md:grid-cols-3 text-center md:text-left">
-            <div>
-              <div
-                className="text-4xl sm:text-5xl text-white tracking-tight"
-                style={{ fontFamily: "'Cormorant Garamond', 'Iowan Old Style', Georgia, serif", fontWeight: 500 }}
-              >
-                47,000
-              </div>
-              <div
-                className="mt-3 text-xs uppercase tracking-[0.25em] text-[#71717a]"
-                style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-              >
-                constraints evaluated / sec
-              </div>
-            </div>
-            <div>
-              <div
-                className="text-4xl sm:text-5xl tracking-tight"
-                style={{
-                  fontFamily: "'Cormorant Garamond', 'Iowan Old Style', Georgia, serif",
-                  fontWeight: 500,
-                  color: ACCENT,
-                }}
-              >
-                0
-              </div>
-              <div
-                className="mt-3 text-xs uppercase tracking-[0.25em] text-[#71717a]"
-                style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-              >
-                false-negatives
-              </div>
-            </div>
-            <div>
-              <div
-                className="text-4xl sm:text-5xl text-white tracking-tight"
-                style={{ fontFamily: "'Cormorant Garamond', 'Iowan Old Style', Georgia, serif", fontWeight: 500 }}
-              >
-                Audit-ready
-              </div>
-              <div
-                className="mt-3 text-xs uppercase tracking-[0.25em] text-[#71717a]"
-                style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-              >
-                by default
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────────────────────────────────────────────────────────
-          COMPLIANCE BADGES
-      ────────────────────────────────────────────────────────────── */}
-      <section className="border-t border-[#16181d]">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <p
-            className="text-[10px] uppercase tracking-[0.3em] text-[#71717a] mb-8 text-center"
-            style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
+        {/* ══════════════════════════════════════════════════════════════
+            FIGURE 1 — a constraint as predicate (the only mono block)
+        ══════════════════════════════════════════════════════════════ */}
+        <section className="pt-16">
+          <figure
+            className="px-6 py-6 sm:px-8 sm:py-7"
+            style={{ border: `1px solid ${INK}`, background: "#fbf9f4" }}
           >
-            Compliance frameworks
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {["SOC 2", "APRA CPS 234", "ISO 27001", "GDPR"].map((badge) => (
-              <div
-                key={badge}
-                className="border px-4 py-2 text-xs"
-                style={{
-                  fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-                  borderColor: `${ACCENT}30`,
-                  color: "#a1a1aa",
-                  background: `${ACCENT}08`,
-                }}
-              >
-                {badge}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────────────────────────────────────────────────────────
-          CTA
-      ────────────────────────────────────────────────────────────── */}
-      <section className="border-t border-[#16181d]">
-        <div className="mx-auto max-w-6xl px-6 py-24 text-center">
-          <p
-            className="text-[10px] uppercase tracking-[0.3em] text-[#71717a] mb-6"
-            style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-          >
-            Declare your first axiom
-          </p>
-          <Link
-            href="/signup"
-            className="inline-block border px-8 py-3 text-sm transition-all duration-200"
-            style={{
-              fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-              borderColor: ACCENT,
-              color: ACCENT,
-              boxShadow: `0 0 20px ${ACCENT}30`,
-            }}
-          >
-            $ axiom declare →
-          </Link>
-        </div>
-      </section>
-
-      {/* ──────────────────────────────────────────────────────────────
-          FOOTER
-      ────────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-[#16181d]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
-          <div
-            className="text-xs text-[#52525b]"
-            style={{ fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace" }}
-          >
-            <span
-              className="text-[#a1a1aa]"
-              style={{ fontFamily: "'Cormorant Garamond', 'Iowan Old Style', Georgia, serif", fontWeight: 600, fontSize: "0.9rem" }}
+            <figcaption
+              className="mb-4 text-[11px] uppercase"
+              style={{ letterSpacing: "0.24em", color: FAINT }}
             >
-              {appConfig.name}
-            </span>
-            <span className="mx-2">·</span>
-            <span>Vienna</span>
-            <span className="mx-2">·</span>
-            <span>axiom.at</span>
-          </div>
-          <a
-            href="https://abduljaleel.xyz/aletheia/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] px-3 py-1.5 border transition-colors"
+              Fig. 1 — A constraint as predicate
+            </figcaption>
+            <pre
+              className="overflow-x-auto text-[13.5px] leading-relaxed"
+              style={{ fontFamily: MONO, color: "#2a2722" }}
+            >
+{`constraint("pii.never.leaves.eu") {
+  when  agent.action ∈ {export, send}
+  then  reject · log · prove
+}`}
+            </pre>
+          </figure>
+          <p
+            className="mt-3 italic"
+            style={{ fontSize: "13.5px", color: FAINT, textAlign: "center" }}
+          >
+            The predicate wraps every session. Violation is structurally
+            impossible.
+          </p>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════
+            Q.E.D. — closing line + compliance marks as text
+        ══════════════════════════════════════════════════════════════ */}
+        <section className="pt-20 pb-4 text-center">
+          <div
+            className="mx-auto mb-8 h-px w-16"
+            style={{ background: RULE }}
+          />
+          <p
             style={{
-              fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-              borderColor: `${ACCENT}40`,
-              color: ACCENT,
+              fontSize: "26px",
+              lineHeight: 1.4,
+              fontWeight: 500,
+              fontStyle: "italic",
             }}
           >
-            Part of the Aletheia stack ↗
-          </a>
-        </div>
-      </footer>
+            What cannot happen, needs no policing.
+          </p>
+          <p
+            className="mt-4 text-[12px] uppercase"
+            style={{ letterSpacing: "0.32em", color: FAINT }}
+          >
+            Q.E.D.
+          </p>
+
+          <p
+            className="mt-10 text-[12.5px] uppercase"
+            style={{ letterSpacing: "0.26em", color: "#4a443a" }}
+          >
+            SOC 2 &nbsp;·&nbsp; APRA CPS 234 &nbsp;·&nbsp; ISO 27001 &nbsp;·&nbsp; GDPR
+          </p>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════
+            FOOTER
+        ══════════════════════════════════════════════════════════════ */}
+        <footer className="mt-16 pb-16">
+          <div style={{ borderTop: `0.5px solid ${RULE}` }} />
+          <div className="mt-4 flex flex-col gap-2 text-[13px] sm:flex-row sm:items-center sm:justify-between">
+            <span style={{ color: FAINT }}>
+              <span style={{ fontWeight: 600, color: INK }}>{appConfig.name}</span>{" "}
+              · Vienna 🇦🇹
+            </span>
+            <a
+              href="https://abduljaleel.xyz/aletheia/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-from-font underline-offset-4 transition-colors hover:opacity-70"
+              style={{ color: FAINT, textDecorationColor: RULE }}
+            >
+              Part of the Aletheia stack ↗
+            </a>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
