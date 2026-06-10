@@ -187,7 +187,10 @@ export default function ExecutionDetailPage({
               Object.keys(step.output).length > 0;
 
             return (
-              <div key={step.nodeId} className="flex gap-4">
+              <div
+                key={step.stepId ?? `${step.nodeId}-${i}`}
+                className="flex gap-4"
+              >
                 {/* Timeline line */}
                 <div className="flex flex-col items-center">
                   <div className={`${cfg.color}`}>{cfg.icon}</div>

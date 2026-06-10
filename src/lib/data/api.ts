@@ -242,6 +242,7 @@ function rowToStep(
   node?: { name: string; type: NodeType }
 ): ExecutionStep {
   return {
+    stepId: r.id,
     nodeId: r.node_id ?? r.id,
     nodeName: node?.name ?? "Step",
     nodeType: node?.type ?? "action",
@@ -402,6 +403,18 @@ export async function createWorkflow(input: CreateWorkflowInput): Promise<string
     }
   }
   return workflowId;
+}
+
+export async function updateWorkflow(
+  id: string,
+  input: { name: string; description: string }
+): Promise<void> {
+  const { supabase } = await getCtx();
+  const { error } = await supabase
+    .from("workflows")
+    .update({ name: input.name, description: input.description })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 export async function updateWorkflowStatus(

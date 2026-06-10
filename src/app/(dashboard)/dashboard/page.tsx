@@ -102,17 +102,29 @@ export default function DashboardPage() {
   }
 
   const activeWorkflows = workflows.filter((w) => w.status === "active").length;
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todayExecutions = executions.filter((e) =>
-    e.startedAt.startsWith(todayKey)
-  );
+  const isToday = (iso: string) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    const n = new Date();
+    return (
+      d.getFullYear() === n.getFullYear() &&
+      d.getMonth() === n.getMonth() &&
+      d.getDate() === n.getDate()
+    );
+  };
+  const todayExecutions = executions.filter((e) => isToday(e.startedAt));
   const completedToday = todayExecutions.filter(
     (e) => e.status === "completed"
   ).length;
+  // Rate over finished runs only — in-flight and awaiting-approval runs
+  // should not count against today's success rate.
+  const finishedToday = todayExecutions.filter(
+    (e) => e.status === "completed" || e.status === "failed"
+  );
   const successRate =
-    todayExecutions.length > 0
-      ? Math.round((completedToday / todayExecutions.length) * 100)
-      : 0;
+    finishedToday.length > 0
+      ? Math.round((completedToday / finishedToday.length) * 100)
+      : null;
 
   const recentExecutions = [...executions]
     .sort(
@@ -164,8 +176,12 @@ export default function DashboardPage() {
             />
             <MetricCard
               title="Success Rate"
-              value={`${successRate}%`}
-              description="Today's execution success"
+              value={successRate === null ? "—" : `${successRate}%`}
+              description={
+                successRate === null
+                  ? "No finished runs today"
+                  : "Today's finished-run success"
+              }
               icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
             />
           </div>

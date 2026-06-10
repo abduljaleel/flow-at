@@ -25,6 +25,8 @@ export interface Workflow {
 export type StepStatus = "completed" | "failed" | "skipped" | "waiting" | "running";
 
 export interface ExecutionStep {
+  /** Unique execution_steps row id (DB-backed steps only; absent in seed data). */
+  stepId?: string;
   nodeId: string;
   nodeName: string;
   nodeType: NodeType;
@@ -292,6 +294,56 @@ export const executions: Execution[] = [
       { nodeId: "n5", nodeName: "Manager Approval", nodeType: "approval", status: "completed", input: { approver: "Lisa Park" }, output: { approved: true }, duration: "3m 50s", startedAt: "2026-04-10T14:20:42Z" },
       { nodeId: "n6", nodeName: "Send Welcome Email", nodeType: "action", status: "completed", input: { template: "onboarding-welcome" }, duration: "5s", output: { sent: true }, startedAt: "2026-04-10T14:24:32Z" },
       { nodeId: "n7", nodeName: "Complete", nodeType: "end", status: "completed", input: {}, output: { success: true }, duration: "0.1s", startedAt: "2026-04-10T14:24:37Z" },
+    ],
+  },
+  {
+    id: "exec-7",
+    workflowId: "wf-4",
+    workflowName: "Content Review",
+    status: "waiting",
+    trigger: "manual",
+    startedAt: "2026-04-11T08:28:00Z",
+    duration: "—",
+    steps: [
+      { nodeId: "n1", nodeName: "Submit Content", nodeType: "start", status: "completed", input: { author: "Maria Lopez", title: "Q1 Product Updates" }, output: { submitted: true }, duration: "0.1s", startedAt: "2026-04-11T08:28:00Z" },
+      { nodeId: "n2", nodeName: "AI Review", nodeType: "action", status: "completed", input: { title: "Q1 Product Updates" }, output: { quality: "pass", compliance: "pass" }, duration: "1m 58s", startedAt: "2026-04-11T08:28:01Z" },
+      { nodeId: "n3", nodeName: "Editor Review", nodeType: "approval", status: "waiting", input: { reviewer: "Editorial team" }, output: {}, duration: "—", startedAt: "2026-04-11T08:30:00Z" },
+      { nodeId: "n4", nodeName: "Publish", nodeType: "action", status: "skipped", input: {}, output: {}, duration: "—", startedAt: "" },
+      { nodeId: "n5", nodeName: "Published", nodeType: "end", status: "skipped", input: {}, output: {}, duration: "—", startedAt: "" },
+    ],
+  },
+  {
+    id: "exec-8",
+    workflowId: "wf-2",
+    workflowName: "Expense Approval",
+    status: "completed",
+    trigger: "manual",
+    startedAt: "2026-04-10T16:18:00Z",
+    duration: "47m 30s",
+    steps: [
+      { nodeId: "n1", nodeName: "Submit Expense", nodeType: "start", status: "completed", input: { submitter: "Jordan Lee", amount: 1200 }, output: { submitted: true }, duration: "0.1s", startedAt: "2026-04-10T16:18:00Z" },
+      { nodeId: "n2", nodeName: "Amount Check", nodeType: "condition", status: "completed", input: { amount: 1200 }, output: { result: false, branch: "below $5k" }, duration: "0.1s", startedAt: "2026-04-10T16:18:01Z" },
+      { nodeId: "n3", nodeName: "Manager Approval", nodeType: "approval", status: "completed", input: { approver: "Sarah Lee" }, output: { approved: true }, duration: "45m", startedAt: "2026-04-10T16:20:00Z" },
+      { nodeId: "n4", nodeName: "VP Approval", nodeType: "approval", status: "skipped", input: {}, output: {}, duration: "—", startedAt: "" },
+      { nodeId: "n5", nodeName: "Process Payment", nodeType: "action", status: "completed", input: { amount: 1200 }, output: { paymentId: "PAY-8841" }, duration: "12s", startedAt: "2026-04-10T17:05:01Z" },
+      { nodeId: "n6", nodeName: "Done", nodeType: "end", status: "completed", input: {}, output: { notified: true }, duration: "0.1s", startedAt: "2026-04-10T17:05:13Z" },
+    ],
+  },
+  {
+    id: "exec-9",
+    workflowId: "wf-2",
+    workflowName: "Expense Approval",
+    status: "failed",
+    trigger: "manual",
+    startedAt: "2026-04-09T09:58:00Z",
+    duration: "1h 32m",
+    steps: [
+      { nodeId: "n1", nodeName: "Submit Expense", nodeType: "start", status: "completed", input: { submitter: "Pat Morgan", amount: 450 }, output: { submitted: true }, duration: "0.1s", startedAt: "2026-04-09T09:58:00Z" },
+      { nodeId: "n2", nodeName: "Amount Check", nodeType: "condition", status: "completed", input: { amount: 450 }, output: { result: false, branch: "below $5k" }, duration: "0.1s", startedAt: "2026-04-09T09:58:01Z" },
+      { nodeId: "n3", nodeName: "Manager Approval", nodeType: "approval", status: "failed", input: { approver: "Sarah Lee" }, output: { approved: false, comment: "Duplicate of license renewed in March" }, duration: "1h 30m", startedAt: "2026-04-09T10:00:00Z" },
+      { nodeId: "n4", nodeName: "VP Approval", nodeType: "approval", status: "skipped", input: {}, output: {}, duration: "—", startedAt: "" },
+      { nodeId: "n5", nodeName: "Process Payment", nodeType: "action", status: "skipped", input: {}, output: {}, duration: "—", startedAt: "" },
+      { nodeId: "n6", nodeName: "Done", nodeType: "end", status: "skipped", input: {}, output: {}, duration: "—", startedAt: "" },
     ],
   },
 ];

@@ -17,6 +17,17 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
   ArrowLeft,
   Play,
   Pause,
@@ -39,6 +50,7 @@ import {
 import {
   getWorkflowById,
   listWorkflowExecutions,
+  updateWorkflow,
   updateWorkflowStatus,
 } from "@/lib/data/api";
 
@@ -89,6 +101,11 @@ export default function WorkflowDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +130,40 @@ export default function WorkflowDetailPage({
       cancelled = true;
     };
   }, [id]);
+
+  function openEdit() {
+    if (!workflow) return;
+    setEditName(workflow.name);
+    setEditDescription(workflow.description);
+    setEditError(null);
+    setEditOpen(true);
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!workflow) return;
+    const name = editName.trim();
+    if (!name) {
+      setEditError("Name is required");
+      return;
+    }
+    setSaving(true);
+    setEditError(null);
+    try {
+      await updateWorkflow(workflow.id, {
+        name,
+        description: editDescription.trim(),
+      });
+      setWorkflow({ ...workflow, name, description: editDescription.trim() });
+      setEditOpen(false);
+    } catch (err) {
+      setEditError(
+        err instanceof Error ? err.message : "Failed to update workflow"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function toggleStatus() {
     if (!workflow) return;
@@ -200,7 +251,7 @@ export default function WorkflowDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={openEdit}>
             <Pencil className="mr-2 h-3.5 w-3.5" />
             Edit
           </Button>
@@ -248,6 +299,58 @@ export default function WorkflowDetailPage({
           />
         </TabsContent>
       </Tabs>
+
+      {/* Edit workflow dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <form onSubmit={handleSaveEdit} className="contents">
+            <DialogHeader>
+              <DialogTitle>Edit workflow</DialogTitle>
+              <DialogDescription>
+                Update the name and description of this workflow.
+              </DialogDescription>
+            </DialogHeader>
+            {editError && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {editError}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="edit-workflow-name">Name</Label>
+              <Input
+                id="edit-workflow-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Workflow name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-workflow-description">Description</Label>
+              <Textarea
+                id="edit-workflow-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="What does this workflow do?"
+                rows={3}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOpen(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
