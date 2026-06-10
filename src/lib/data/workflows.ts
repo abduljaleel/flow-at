@@ -572,7 +572,7 @@ export function formatDate(dateStr: string): string {
 
 export function formatRelativeTime(dateStr: string): string {
   if (!dateStr) return "—";
-  const now = new Date("2026-04-11T15:30:00Z");
+  const now = new Date();
   const d = new Date(dateStr);
   const diffMs = now.getTime() - d.getTime();
   const diffMin = Math.floor(diffMs / 60000);

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -14,7 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, GitBranch, Webhook, Clock, Play } from "lucide-react";
-import { workflows, formatDate } from "@/lib/data/workflows";
+import { formatDate, type Workflow } from "@/lib/data/workflows";
+import { listWorkflows } from "@/lib/data/api";
 
 type StatusFilter = "all" | "active" | "paused" | "draft";
 
@@ -26,6 +28,27 @@ const triggerIcons: Record<string, React.ReactNode> = {
 
 export default function WorkflowsPage() {
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listWorkflows()
+      .then((data) => {
+        if (!cancelled) setWorkflows(data);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load workflows");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered =
     filter === "all" ? workflows : workflows.filter((w) => w.status === filter);
@@ -73,62 +96,77 @@ export default function WorkflowsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Trigger</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Executions</TableHead>
-                <TableHead>Last Run</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((wf) => (
-                <TableRow key={wf.id}>
-                  <TableCell>
-                    <Link
-                      href={`/workflows/${wf.id}`}
-                      className="flex items-center gap-2 font-medium hover:underline"
-                    >
-                      <GitBranch className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div>{wf.name}</div>
-                        <div className="text-xs font-normal text-muted-foreground max-w-xs truncate">
-                          {wf.description}
-                        </div>
-                      </div>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      {triggerIcons[wf.triggerType]}
-                      <span className="capitalize">{wf.triggerType}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <WorkflowStatusBadge status={wf.status} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {wf.executionCount.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {wf.lastRun ? formatDate(wf.lastRun) : "Never"}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+          {loading ? (
+            <div className="space-y-3 p-6">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : error ? (
+            <div className="py-12 text-center text-sm text-destructive">
+              {error}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-muted-foreground py-8"
-                  >
-                    No workflows matching this filter
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Trigger</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Executions</TableHead>
+                  <TableHead>Last Run</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((wf) => (
+                  <TableRow key={wf.id}>
+                    <TableCell>
+                      <Link
+                        href={`/workflows/${wf.id}`}
+                        className="flex items-center gap-2 font-medium hover:underline"
+                      >
+                        <GitBranch className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <div>{wf.name}</div>
+                          <div className="text-xs font-normal text-muted-foreground max-w-xs truncate">
+                            {wf.description}
+                          </div>
+                        </div>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        {triggerIcons[wf.triggerType]}
+                        <span className="capitalize">{wf.triggerType}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <WorkflowStatusBadge status={wf.status} />
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {wf.executionCount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {wf.lastRun ? formatDate(wf.lastRun) : "Never"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-center text-muted-foreground py-8"
+                    >
+                      {workflows.length === 0
+                        ? "No workflows yet — create one or load demo data from the Dashboard"
+                        : "No workflows matching this filter"}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

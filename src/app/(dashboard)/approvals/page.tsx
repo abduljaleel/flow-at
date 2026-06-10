@@ -1,30 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   CheckCircle2,
   XCircle,
   Clock,
   User,
   GitBranch,
+  Loader2,
 } from "lucide-react";
 import {
-  getPendingApprovals,
-  getApprovalHistory,
   formatDate,
   formatRelativeTime,
   type Approval,
 } from "@/lib/data/workflows";
+import { listApprovals, resolveApproval } from "@/lib/data/api";
 
 export default function ApprovalsPage() {
   const [tab, setTab] = useState<"pending" | "history">("pending");
+  const [pending, setPending] = useState<Approval[]>([]);
+  const [history, setHistory] = useState<Approval[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
 
-  const pending = getPendingApprovals();
-  const history = getApprovalHistory();
+  const load = useCallback(async () => {
+    try {
+      setError(null);
+      const result = await listApprovals();
+      setPending(result.pending);
+      setHistory(result.history);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load approvals");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function handleResolve(
+    approval: Approval,
+    decision: "approved" | "rejected"
+  ) {
+    setResolvingId(approval.executionId);
+    try {
+      await resolveApproval(approval.executionId, decision);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update approval");
+    } finally {
+      setResolvingId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -34,6 +69,12 @@ export default function ApprovalsPage() {
           Review and respond to approval requests
         </p>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       {/* Tab buttons */}
       <div className="flex gap-2">
@@ -58,8 +99,28 @@ export default function ApprovalsPage() {
         </Button>
       </div>
 
-      {tab === "pending" ? (
-        <PendingApprovals approvals={pending} />
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-32 mt-2" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : tab === "pending" ? (
+        <PendingApprovals
+          approvals={pending}
+          resolvingId={resolvingId}
+          onResolve={handleResolve}
+        />
       ) : (
         <ApprovalHistory approvals={history} />
       )}
@@ -67,7 +128,15 @@ export default function ApprovalsPage() {
   );
 }
 
-function PendingApprovals({ approvals }: { approvals: Approval[] }) {
+function PendingApprovals({
+  approvals,
+  resolvingId,
+  onResolve,
+}: {
+  approvals: Approval[];
+  resolvingId: string | null;
+  onResolve: (approval: Approval, decision: "approved" | "rejected") => void;
+}) {
   if (approvals.length === 0) {
     return (
       <Card>
@@ -82,57 +151,87 @@ function PendingApprovals({ approvals }: { approvals: Approval[] }) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {approvals.map((approval) => (
-        <Card key={approval.id} className="flex flex-col">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-base">{approval.stepName}</CardTitle>
-                <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
-                  <GitBranch className="h-3.5 w-3.5" />
-                  <Link
-                    href={`/workflows/${approval.workflowId}`}
-                    className="hover:underline"
-                  >
-                    {approval.workflowName}
-                  </Link>
+      {approvals.map((approval) => {
+        const busy = resolvingId === approval.executionId;
+        return (
+          <Card key={approval.id} className="flex flex-col">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-base">{approval.stepName}</CardTitle>
+                  <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
+                    <GitBranch className="h-3.5 w-3.5" />
+                    <Link
+                      href={`/workflows/${approval.workflowId}`}
+                      className="hover:underline"
+                    >
+                      {approval.workflowName}
+                    </Link>
+                  </div>
                 </div>
+                <Badge variant="outline">
+                  <Clock className="mr-1 h-3 w-3" />
+                  Pending
+                </Badge>
               </div>
-              <Badge variant="outline">
-                <Clock className="mr-1 h-3 w-3" />
-                Pending
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <User className="h-3.5 w-3.5" />
-                Requested by {approval.requestedBy}
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <User className="h-3.5 w-3.5" />
+                  Requested by {approval.requestedBy}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {formatRelativeTime(approval.requestedAt)}
+                </p>
+                <p className="text-sm">{approval.dataSummary}</p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {formatRelativeTime(approval.requestedAt)}
-              </p>
-              <p className="text-sm">{approval.dataSummary}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" className="flex-1">
-                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                Approve
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1">
-                <XCircle className="mr-1.5 h-3.5 w-3.5" />
-                Reject
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  disabled={busy}
+                  onClick={() => onResolve(approval, "approved")}
+                >
+                  {busy ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={busy}
+                  onClick={() => onResolve(approval, "rejected")}
+                >
+                  <XCircle className="mr-1.5 h-3.5 w-3.5" />
+                  Reject
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
 
 function ApprovalHistory({ approvals }: { approvals: Approval[] }) {
+  if (approvals.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <Clock className="h-8 w-8 mx-auto mb-3" />
+          <p className="font-medium">No history yet</p>
+          <p className="text-sm">Resolved approvals will appear here.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {approvals.map((approval) => (

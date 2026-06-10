@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
   DollarSign,
@@ -16,7 +17,8 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react";
-import { templates, type Template } from "@/lib/data/workflows";
+import type { Template } from "@/lib/data/workflows";
+import { listTemplates } from "@/lib/data/api";
 
 type Category = "All" | "HR" | "Finance" | "Operations" | "Engineering" | "Custom";
 
@@ -38,6 +40,27 @@ const categoryColors: Record<string, string> = {
 
 export default function TemplatesPage() {
   const [filter, setFilter] = useState<Category>("All");
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listTemplates()
+      .then((data) => {
+        if (!cancelled) setTemplates(data);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load templates");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const categories: Category[] = [
     "All",
@@ -85,11 +108,51 @@ export default function TemplatesPage() {
       </div>
 
       {/* Template grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((template) => (
-          <TemplateCard key={template.id} template={template} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-9 w-9 rounded-lg" />
+                <Skeleton className="h-5 w-40 mt-3" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-destructive">
+            {error}
+          </CardContent>
+        </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Palette className="h-8 w-8 mx-auto mb-3" />
+            <p className="font-medium">
+              {templates.length === 0
+                ? "No templates yet"
+                : "No templates in this category"}
+            </p>
+            <p className="text-sm">
+              {templates.length === 0
+                ? "Load demo data from the Dashboard to add starter templates."
+                : "Try a different category filter."}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((template) => (
+            <TemplateCard key={template.id} template={template} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   Play,
@@ -16,8 +16,10 @@ import {
   Clock,
   CheckCircle2,
   GitBranch,
+  Loader2,
 } from "lucide-react";
-import { templates } from "@/lib/data/workflows";
+import type { Template } from "@/lib/data/workflows";
+import { createWorkflow, listTemplates } from "@/lib/data/api";
 
 type TriggerType = "manual" | "webhook" | "schedule";
 
@@ -43,22 +45,82 @@ const triggers: { value: TriggerType; label: string; description: string; icon: 
 ];
 
 export default function NewWorkflowPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <NewWorkflowContent />
+    </Suspense>
+  );
+}
+
+function NewWorkflowContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateId = searchParams.get("template");
-  const selectedTemplate = templateId
-    ? templates.find((t) => t.id === templateId)
-    : null;
 
-  const [name, setName] = useState(selectedTemplate?.name || "");
-  const [description, setDescription] = useState(
-    selectedTemplate?.description || ""
-  );
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState<TriggerType>("manual");
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleCreate() {
-    // In a real app this would create the workflow via API
-    router.push("/workflows/wf-1");
+  useEffect(() => {
+    let cancelled = false;
+    listTemplates()
+      .then((data) => {
+        if (!cancelled) setTemplates(data);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load templates");
+      })
+      .finally(() => {
+        if (!cancelled) setTemplatesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedTemplate = templateId
+    ? templates.find((t) => t.id === templateId) ?? null
+    : null;
+  const selectedTemplateId = selectedTemplate?.id ?? null;
+
+  // Prefill the form whenever a template is (re)selected.
+  useEffect(() => {
+    if (!selectedTemplateId) return;
+    const template = templates.find((t) => t.id === selectedTemplateId);
+    if (template) {
+      setName(template.name);
+      setDescription(template.description);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplateId]);
+
+  async function handleCreate() {
+    if (!name.trim()) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const id = await createWorkflow({
+        name: name.trim(),
+        description: description.trim(),
+        triggerType,
+        template: selectedTemplate,
+      });
+      router.push(`/workflows/${id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create workflow");
+      setCreating(false);
+    }
   }
 
   return (
@@ -81,7 +143,21 @@ export default function NewWorkflowPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       {/* Template info */}
+      {templateId && templatesLoading && (
+        <Card>
+          <CardContent className="py-4">
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      )}
+
       {selectedTemplate && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="flex items-center gap-3 py-4">
@@ -106,26 +182,39 @@ export default function NewWorkflowPage() {
       )}
 
       {/* No template — show template picker */}
-      {!selectedTemplate && (
+      {!selectedTemplate && !(templateId && templatesLoading) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Start from a template</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {templates.slice(0, 6).map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/workflows/new?template=${t.id}`}
-                  className="rounded-lg border p-3 text-sm hover:bg-muted transition-colors"
-                >
-                  <div className="font-medium">{t.name}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {t.nodeCount} steps &middot; {t.category}
-                  </div>
-                </Link>
-              ))}
-            </div>
+            {templatesLoading ? (
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : templates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No templates yet — load demo data from the Dashboard to add
+                starter templates.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {templates.slice(0, 6).map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/workflows/new?template=${t.id}`}
+                    className="rounded-lg border p-3 text-sm hover:bg-muted transition-colors"
+                  >
+                    <div className="font-medium">{t.name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {t.nodeCount} steps &middot; {t.category}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -197,8 +286,15 @@ export default function NewWorkflowPage() {
         <Link href="/workflows">
           <Button variant="outline">Cancel</Button>
         </Link>
-        <Button onClick={handleCreate} disabled={!name.trim()}>
-          Create Workflow
+        <Button onClick={handleCreate} disabled={!name.trim() || creating}>
+          {creating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            "Create Workflow"
+          )}
         </Button>
       </div>
     </div>

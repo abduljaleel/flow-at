@@ -1,11 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -29,12 +30,17 @@ import {
   ChevronRight,
 } from "lucide-react";
 import {
-  getWorkflow,
-  getWorkflowExecutions,
   formatDate,
-  type WorkflowNode,
+  type Execution,
   type NodeType,
+  type Workflow,
+  type WorkflowNode,
 } from "@/lib/data/workflows";
+import {
+  getWorkflowById,
+  listWorkflowExecutions,
+  updateWorkflowStatus,
+} from "@/lib/data/api";
 
 const nodeTypeConfig: Record<
   NodeType,
@@ -78,10 +84,98 @@ export default function WorkflowDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const workflow = getWorkflow(id);
-  if (!workflow) return notFound();
+  const [workflow, setWorkflow] = useState<Workflow | null>(null);
+  const [executions, setExecutions] = useState<Execution[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const wfExecutions = getWorkflowExecutions(id);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [wf, execs] = await Promise.all([
+          getWorkflowById(id),
+          listWorkflowExecutions(id),
+        ]);
+        if (!cancelled) {
+          setWorkflow(wf);
+          setExecutions(execs);
+        }
+      } catch (e) {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load workflow");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  async function toggleStatus() {
+    if (!workflow) return;
+    const next = workflow.status === "active" ? "paused" : "active";
+    setUpdatingStatus(true);
+    setError(null);
+    try {
+      await updateWorkflowStatus(workflow.id, next);
+      setWorkflow({ ...workflow, status: next });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update workflow");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start gap-3">
+          <Link href="/workflows">
+            <Button variant="ghost" size="sm" className="mt-1">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+        </div>
+        <Skeleton className="h-9 w-48" />
+        <Card>
+          <CardContent className="space-y-3 py-6">
+            <Skeleton className="h-20 w-full max-w-md mx-auto" />
+            <Skeleton className="h-20 w-full max-w-md mx-auto" />
+            <Skeleton className="h-20 w-full max-w-md mx-auto" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start gap-3">
+          <Link href="/workflows">
+            <Button variant="ghost" size="sm" className="mt-1">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold tracking-tight">Workflow</h1>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-destructive">
+            {error}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!workflow) return notFound();
 
   return (
     <div className="space-y-6">
@@ -113,6 +207,8 @@ export default function WorkflowDetailPage({
           <Button
             variant={workflow.status === "active" ? "outline" : "default"}
             size="sm"
+            onClick={toggleStatus}
+            disabled={updatingStatus}
           >
             {workflow.status === "active" ? (
               <>
@@ -136,7 +232,7 @@ export default function WorkflowDetailPage({
           <TabsTrigger value="runs">
             Runs
             <Badge variant="secondary" className="ml-1.5 text-[10px] h-4 px-1.5">
-              {wfExecutions.length}
+              {executions.length}
             </Badge>
           </TabsTrigger>
         </TabsList>
@@ -148,7 +244,7 @@ export default function WorkflowDetailPage({
         <TabsContent value="runs">
           <RunsTab
             workflowId={workflow.id}
-            executions={wfExecutions}
+            executions={executions}
           />
         </TabsContent>
       </Tabs>
@@ -168,20 +264,26 @@ function BuilderTab({ nodes }: { nodes: WorkflowNode[] }) {
             <CardTitle className="text-base">Workflow Steps</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center gap-0">
-              {nodes.map((node, i) => (
-                <div key={node.id} className="flex flex-col items-center w-full max-w-md">
-                  <NodeCard node={node} />
-                  {i < nodes.length - 1 && (
-                    <div className="flex flex-col items-center py-1">
-                      <div className="w-px h-6 bg-border" />
-                      <ChevronRight className="h-3 w-3 text-muted-foreground rotate-90" />
-                      <div className="w-px h-2 bg-border" />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            {nodes.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No steps defined yet for this workflow.
+              </p>
+            ) : (
+              <div className="flex flex-col items-center gap-0">
+                {nodes.map((node, i) => (
+                  <div key={node.id} className="flex flex-col items-center w-full max-w-md">
+                    <NodeCard node={node} />
+                    {i < nodes.length - 1 && (
+                      <div className="flex flex-col items-center py-1">
+                        <div className="w-px h-6 bg-border" />
+                        <ChevronRight className="h-3 w-3 text-muted-foreground rotate-90" />
+                        <div className="w-px h-2 bg-border" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -278,7 +380,7 @@ function RunsTab({
   executions,
 }: {
   workflowId: string;
-  executions: ReturnType<typeof getWorkflowExecutions>;
+  executions: Execution[];
 }) {
   if (executions.length === 0) {
     return (

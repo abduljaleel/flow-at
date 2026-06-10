@@ -1,11 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -20,12 +21,12 @@ import {
   CircleStop,
 } from "lucide-react";
 import {
-  getExecution,
-  getWorkflow,
   formatDate,
+  type Execution,
   type StepStatus,
   type NodeType,
 } from "@/lib/data/workflows";
+import { getExecutionById } from "@/lib/data/api";
 
 const statusConfig: Record<
   StepStatus,
@@ -77,10 +78,72 @@ export default function ExecutionDetailPage({
   params: Promise<{ id: string; runId: string }>;
 }) {
   const { id, runId } = use(params);
-  const execution = getExecution(runId);
-  const workflow = getWorkflow(id);
+  const [execution, setExecution] = useState<Execution | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!execution || !workflow) return notFound();
+  useEffect(() => {
+    let cancelled = false;
+    getExecutionById(runId)
+      .then((data) => {
+        if (!cancelled) setExecution(data);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load execution");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [runId]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start gap-3">
+          <Link href={`/workflows/${id}`}>
+            <Button variant="ghost" size="sm" className="mt-1">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start gap-3">
+          <Link href={`/workflows/${id}`}>
+            <Button variant="ghost" size="sm" className="mt-1">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold tracking-tight">Execution</h1>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-destructive">
+            {error}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!execution || execution.workflowId !== id) return notFound();
 
   return (
     <div className="space-y-6">
@@ -94,100 +157,109 @@ export default function ExecutionDetailPage({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">
-              Execution {runId}
+              Execution {runId.slice(0, 8)}
             </h1>
             <ExecStatusBadge status={execution.status} />
           </div>
           <p className="text-muted-foreground mt-1">
-            {workflow.name} &middot; Started {formatDate(execution.startedAt)}{" "}
-            &middot; Duration: {execution.duration} &middot; Trigger:{" "}
+            {execution.workflowName} &middot; Started{" "}
+            {formatDate(execution.startedAt)} &middot; Duration:{" "}
+            {execution.duration} &middot; Trigger:{" "}
             <span className="capitalize">{execution.trigger}</span>
           </p>
         </div>
       </div>
 
       {/* Step trace */}
-      <div className="space-y-0">
-        {execution.steps.map((step, i) => {
-          const cfg = statusConfig[step.status];
-          const isLast = i === execution.steps.length - 1;
-          const hasData =
-            Object.keys(step.input).length > 0 ||
-            Object.keys(step.output).length > 0;
+      {execution.steps.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            No steps recorded for this execution.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-0">
+          {execution.steps.map((step, i) => {
+            const cfg = statusConfig[step.status];
+            const isLast = i === execution.steps.length - 1;
+            const hasData =
+              Object.keys(step.input).length > 0 ||
+              Object.keys(step.output).length > 0;
 
-          return (
-            <div key={step.nodeId} className="flex gap-4">
-              {/* Timeline line */}
-              <div className="flex flex-col items-center">
-                <div className={`${cfg.color}`}>{cfg.icon}</div>
-                {!isLast && (
-                  <div className="w-px flex-1 bg-border min-h-[24px]" />
-                )}
-              </div>
-
-              {/* Step card */}
-              <div className={`flex-1 mb-4 rounded-lg border ${cfg.bg} p-4`}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">
-                        {step.nodeName}
-                      </span>
-                      <Badge variant="outline" className="text-[10px] capitalize gap-1">
-                        {nodeTypeIcon[step.nodeType]}
-                        {step.nodeType}
-                      </Badge>
-                      <Badge
-                        variant={
-                          step.status === "failed"
-                            ? "destructive"
-                            : step.status === "completed"
-                              ? "default"
-                              : "secondary"
-                        }
-                        className="text-[10px]"
-                      >
-                        {cfg.label}
-                      </Badge>
-                    </div>
-                    {step.startedAt && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Started: {formatDate(step.startedAt)} &middot; Duration:{" "}
-                        {step.duration}
-                      </p>
-                    )}
-                  </div>
+            return (
+              <div key={step.nodeId} className="flex gap-4">
+                {/* Timeline line */}
+                <div className="flex flex-col items-center">
+                  <div className={`${cfg.color}`}>{cfg.icon}</div>
+                  {!isLast && (
+                    <div className="w-px flex-1 bg-border min-h-[24px]" />
+                  )}
                 </div>
 
-                {hasData && (
-                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {Object.keys(step.input).length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Input
-                        </p>
-                        <pre className="text-xs bg-background/80 rounded p-2 overflow-x-auto border">
-                          {JSON.stringify(step.input, null, 2)}
-                        </pre>
+                {/* Step card */}
+                <div className={`flex-1 mb-4 rounded-lg border ${cfg.bg} p-4`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
+                          {step.nodeName}
+                        </span>
+                        <Badge variant="outline" className="text-[10px] capitalize gap-1">
+                          {nodeTypeIcon[step.nodeType]}
+                          {step.nodeType}
+                        </Badge>
+                        <Badge
+                          variant={
+                            step.status === "failed"
+                              ? "destructive"
+                              : step.status === "completed"
+                                ? "default"
+                                : "secondary"
+                          }
+                          className="text-[10px]"
+                        >
+                          {cfg.label}
+                        </Badge>
                       </div>
-                    )}
-                    {Object.keys(step.output).length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Output
+                      {step.startedAt && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Started: {formatDate(step.startedAt)} &middot; Duration:{" "}
+                          {step.duration}
                         </p>
-                        <pre className="text-xs bg-background/80 rounded p-2 overflow-x-auto border">
-                          {JSON.stringify(step.output, null, 2)}
-                        </pre>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  {hasData && (
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Object.keys(step.input).length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">
+                            Input
+                          </p>
+                          <pre className="text-xs bg-background/80 rounded p-2 overflow-x-auto border">
+                            {JSON.stringify(step.input, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {Object.keys(step.output).length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">
+                            Output
+                          </p>
+                          <pre className="text-xs bg-background/80 rounded p-2 overflow-x-auto border">
+                            {JSON.stringify(step.output, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
